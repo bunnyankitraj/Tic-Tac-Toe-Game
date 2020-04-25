@@ -1,115 +1,111 @@
-#Tic-Tac-Toe-Game
-#Tic-Tac-Toe Program using 
-#random number in Python 
+#!/usr/bin/python3
+# Simple TicTacToe game in Python - EAO
+import random
+import sys
 
-#importing all necessary libraries 
-import numpy as np 
-import random 
-from time import sleep 
+board=[i for i in range(0,9)]
+player, computer = '',''
 
-#Creates an empty board 
-def create_board(): 
-	return(np.array([[0, 0, 0], 
-					[0, 0, 0], 
-					[0, 0, 0]])) 
+# Corners, Center and Others, respectively
+moves=((1,7,3,9),(5,),(2,4,6,8))
+# Winner combinations
+winners=((0,1,2),(3,4,5),(6,7,8),(0,3,6),(1,4,7),(2,5,8),(0,4,8),(2,4,6))
+# Table
+tab=range(1,10)
 
-#Check for empty places on board 
-def possibilities(board): 
-	l = [] 
-	
-	for i in range(len(board)): 
-		for j in range(len(board)): 
-			
-			if board[i][j] == 0: 
-				l.append((i, j)) 
-	return(l) 
+def print_board():
+    x=1
+    for i in board:
+        end = ' | '
+        if x%3 == 0:
+            end = ' \n'
+            if i != 1: end+='---------\n';
+        char=' '
+        if i in ('X','O'): char=i;
+        x+=1
+        print(char,end=end)
+        
+def select_char():
+    chars=('X','O')
+    if random.randint(0,1) == 0:
+        return chars[::-1]
+    return chars
 
-#Select a random place for the player 
-def random_place(board, player): 
-	selection = possibilities(board) 
-	current_loc = random.choice(selection) 
-	board[current_loc] = player 
-	return(board) 
+def can_move(brd, player, move):
+    if move in tab and brd[move-1] == move-1:
+        return True
+    return False
 
-#Checks whether the player has three 
-#of their marks in a horizontal row 
-def row_win(board, player): 
-	for x in range(len(board)): 
-		win = True
-		
-		for y in range(len(board)): 
-			if board[x, y] != player: 
-				win = False
-				continue
-				
-		if win == True: 
-			return(win) 
-	return(win) 
+def can_win(brd, player, move):
+    places=[]
+    x=0
+    for i in brd:
+        if i == player: places.append(x);
+        x+=1
+    win=True
+    for tup in winners:
+        win=True
+        for ix in tup:
+            if brd[ix] != player:
+                win=False
+                break
+        if win == True:
+            break
+    return win
 
-#Checks whether the player has three 
-#of their marks in a vertical row 
-def col_win(board, player): 
-	for x in range(len(board)): 
-		win = True
-		
-		for y in range(len(board)): 
-			if board[y][x] != player: 
-				win = False
-				continue
-				
-		if win == True: 
-			return(win) 
-	return(win) 
+def make_move(brd, player, move, undo=False):
+    if can_move(brd, player, move):
+        brd[move-1] = player
+        win=can_win(brd, player, move)
+        if undo:
+            brd[move-1] = move-1
+        return (True, win)
+    return (False, False)
 
-#Checks whether the player has three 
-#of their marks in a diagonal row 
-def diag_win(board, player): 
-	win = True
-	y = 0
-	for x in range(len(board)): 
-		if board[x, x] != player: 
-			win = False
-	win = True
-	if win: 
-		for x in range(len(board)): 
-			y = len(board) - 1 - x 
-			if board[x, y] != player: 
-				win = False
-	return win 
+# AI goes here
+def computer_move():
+    move=-1
+    # If I can win, others don't matter.
+    for i in range(1,10):
+        if make_move(board, computer, i, True)[1]:
+            move=i
+            break
+    if move == -1:
+        # If player can win, block him.
+        for i in range(1,10):
+            if make_move(board, player, i, True)[1]:
+                move=i
+                break
+    if move == -1:
+        # Otherwise, try to take one of desired places.
+        for tup in moves:
+            for mv in tup:
+                if move == -1 and can_move(board, computer, mv):
+                    move=mv
+                    break
+    return make_move(board, computer, move)
 
-#Evaluates whether there is 
-#a winner or a tie 
-def evaluate(board): 
-	winner = 0
-	
-	for player in [1, 2]: 
-		if (row_win(board, player) or
-			col_win(board,player) or
-			diag_win(board,player)): 
-				
-			winner = player 
-			
-	if np.all(board != 0) and winner == 0: 
-		winner = -1
-	return winner 
+def space_exist():
+    return board.count('X') + board.count('O') != 9
 
-#Main function to start the game 
-def play_game(): 
-	board, winner, counter = create_board(), 0, 1
-	print(board) 
-	sleep(2) 
-	
-	while winner == 0: 
-		for player in [1, 2]: 
-			board = random_place(board, player) 
-			print("Board after " + str(counter) + " move") 
-			print(board) 
-			sleep(2) 
-			counter += 1
-			winner = evaluate(board) 
-			if winner != 0: 
-				break
-	return(winner) 
+player, computer = select_char()
+print('Player is [%s] and computer is [%s]' % (player, computer))
+result='%%% Deuce ! %%%'
+while space_exist():
+    print_board()
+    print('# Make your move ! [1-9] : ', end='')
+    move = int(input())
+    moved, won = make_move(board, player, move)
+    if not moved:
+        print(' >> Invalid number ! Try again !')
+        continue
+    #
+    if won:
+        result='*** Congratulations ! You won ! ***'
+        break
+    elif computer_move()[1]:
+        result='=== You lose ! =='
+        break;
 
-#Driver Code 
-print("Winner is: " + str(play_game())) 
+print_board()
+print(result)
